@@ -1,0 +1,137 @@
+---
+title: "EDA"
+format: html
+editor: visual
+---
+
+## Data Description
+
+The dataset used in this analysis is from the Behavioral Risk Factor Surveillance System (BRFSS) 2015 and includes various health indicators related to diabetes. This dataset comprises 22 variables, but our analysis will focus on a subset of these:
+
+BMI: Body Mass Index, a measure of body fat based on weight and height. MentHlth: Number of days in the past 30 days when mental health was not good. PhysHlth: Number of days in the past 30 days when physical health was not good. Diabetes_binary: Binary indicator of diabetes status (1 for yes, 0 for no), which is our primary outcome variable. HighBP: Whether the individual has high blood pressure (yes/no). HighChol: Whether the individual has high cholesterol (yes/no). CholCheck: Whether the individual has had their cholesterol checked in the past 5 years (yes/no). Smoker: Whether the individual is a current smoker (yes/no). Stroke: Whether the individual has had a stroke (yes/no). HeartDiseaseorAttack: Whether the individual has heart disease or has had a heart attack (yes/no). PhysActivity: Whether the individual engages in physical activity (yes/no). Fruits: Whether the individual consumes fruit regularly (yes/no). Veggies: Whether the individual consumes vegetables regularly (yes/no). HvyAlcoholConsump: Whether the individual consumes alcohol heavily (yes/no). AnyHealthcare: Whether the individual has any form of healthcare coverage (yes/no). NoDocbcCost: Whether the individual did not visit a doctor due to cost (yes/no). GenHlth: General health status (e.g., poor, fair, good, very good, excellent). DiffWalk: Whether the individual has difficulty walking or climbing stairs (yes/no). Sex: Gender of the individual (male/female). Age: Age of the individual. Education: Education level of the individual. Income: Income level of the individual.
+
+### Purpose of the Exploratory Data Analysis (EDA)
+
+The purpose of this exploratory data analysis is to gain insights into the relationship between the diabetes status (Diabetes_binary) and various health indicators and demographic factors. Specifically, we aim to:
+
+Understand Distributions: Examine the distributions of key variables like BMI, mental health days (MentHlth), and physical health days (PhysHlth) across different diabetes statuses. Explore Relationships: Investigate how categorical factors such as high blood pressure, smoking status, and healthcare coverage relate to diabetes status. Visualize Data: Use bar plots and histograms to visualize the distribution and count of categories within factor variables, segmented by diabetes status.
+
+### Ultimate Goal of Modeling
+
+The ultimate goal of the modeling phase is to develop a predictive model that can accurately predict diabetes status based on the health indicators and demographic factors. By understanding the relationships and patterns observed in the EDA, we will be better equipped to build a robust model that can potentially identify individuals at higher risk of diabetes and support targeted interventions.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(knitr)
+```
+
+```{r}
+df <- read_csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+
+head(df)
+```
+
+```{r}
+df <- df %>%
+  mutate(
+    Diabetes_binary = factor(Diabetes_binary, levels = c(0, 1), labels = c("No", "Yes")),
+    HighBP = factor(HighBP, levels = c(0, 1), labels = c("No", "Yes")),
+    HighChol = factor(HighChol, levels = c(0, 1), labels = c("No", "Yes")),
+    CholCheck = factor(CholCheck, levels = c(0, 1), labels = c("No", "Yes")),
+    Smoker = factor(Smoker, levels = c(0, 1), labels = c("No", "Yes")),
+    Stroke = factor(Stroke, levels = c(0, 1), labels = c("No", "Yes")),
+    HeartDiseaseorAttack = factor(HeartDiseaseorAttack, levels = c(0, 1), labels = c("No", "Yes")),
+    PhysActivity = factor(PhysActivity, levels = c(0, 1), labels = c("No", "Yes")),
+    Fruits = factor(Fruits, levels = c(0, 1), labels = c("No", "Yes")),
+    Veggies = factor(Veggies, levels = c(0, 1), labels = c("No", "Yes")),
+    HvyAlcoholConsump = factor(HvyAlcoholConsump, levels = c(0, 1), labels = c("No", "Yes")),
+    AnyHealthcare = factor(AnyHealthcare, levels = c(0, 1), labels = c("No", "Yes")),
+    NoDocbcCost = factor(NoDocbcCost, levels = c(0, 1), labels = c("No", "Yes")),
+    GenHlth = factor(GenHlth, levels = 1:5, labels = c("Excellent", "Very Good", "Good", "Fair", "Poor")),
+    MentHlth = as.integer(MentHlth),
+    PhysHlth = as.integer(PhysHlth),
+    DiffWalk = factor(DiffWalk, levels = c(0, 1), labels = c("No", "Yes")),
+    Sex = factor(Sex, levels = c(0, 1), labels = c("Female", "Male")),
+    Age = factor(Age, levels = 1:13, labels = c("18-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+")),
+    Education = factor(Education, levels = 1:6, labels = c("Never attended", "Grades 1-8", "Grades 9-11", "Grade 12 or GED", "College 1-3 years", "College 4 years or more")),
+    Income = factor(Income, levels = 1:8, labels = c("<$10,000", "$10,000-$15,000", "$15,000-$20,000", "$20,000-$25,000", "$25,000-$35,000", "$35,000-$50,000", "$50,000-$75,000", ">$75,000"))
+  )
+
+head(df)
+```
+
+```{r}
+summary(df$BMI)
+
+summary(df$MentHlth)
+
+summary(df$PhysHlth)
+
+create_histograms <- function(df, variable, binwidth) {
+  ggplot(df, aes_string(x = variable)) +
+    geom_histogram(binwidth = binwidth, color = "black", fill = "skyblue") +
+    facet_wrap(~Diabetes_binary, ncol = 2, scales = "free_y") +
+    labs(title = paste("Histogram of", variable, "by Diabetes Status"), x = variable, y = "Count") +
+    theme_minimal()
+}
+
+plot_bmi <- create_histograms(df, "BMI", 1)
+plot_menthlth <- create_histograms(df, "MentHlth", 1)
+plot_physhlth <- create_histograms(df, "PhysHlth", 1)
+
+print(plot_bmi)
+print(plot_menthlth)
+print(plot_physhlth)
+
+```
+
+```{r}
+calculate_percentages <- function(df, var) {
+  df %>%
+    group_by(Diabetes_binary, !!sym(var)) %>%
+    summarise(count = n(), .groups = 'drop') %>%
+    mutate(percentage = count / sum(count) * 100) %>%
+    select(Diabetes_binary, !!sym(var), percentage) %>%
+    spread(key = Diabetes_binary, value = percentage, fill = 0) %>%
+    rename(Level = !!sym(var)) %>%
+    mutate(Variable = var)
+}
+
+factor_vars <- c("HighBP", "HighChol", "CholCheck", "Smoker", "Stroke", "HeartDiseaseorAttack",
+                 "PhysActivity", "Fruits", "Veggies", "HvyAlcoholConsump", "AnyHealthcare",
+                 "NoDocbcCost", "GenHlth", "DiffWalk", "Sex", "Age", "Education", "Income")
+
+
+percentage_tables <- lapply(factor_vars, function(var) {
+  calculate_percentages(df, var)
+})
+
+
+combined_table <- bind_rows(percentage_tables)
+
+combined_table <- combined_table %>%
+  select(Variable, Level, No, Yes)
+
+
+kable(combined_table, format = "pipe", col.names = c("Variable", "Level", "No Diabetes (%)", "Diabetes (%)"))
+
+
+plot_list <- lapply(factor_vars, function(var) {
+  df %>%
+    ggplot(aes_string(x = var, fill = "Diabetes_binary")) +
+    geom_bar(position = "dodge") +
+    labs(title = paste("Counts of", var, "by Diabetes Status"),
+         x = var,
+         y = "Count") +
+    scale_fill_manual(values = c("skyblue", "orange")) +
+    theme_minimal()
+})
+
+# Display plots
+for (plot in plot_list) {
+  print(plot)
+}
+```

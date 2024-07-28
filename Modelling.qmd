@@ -1,0 +1,185 @@
+---
+title: "modelling"
+format: html
+editor: visual
+---
+
+# Modeling
+
+### Data Description
+
+The dataset used in this analysis is from the Behavioral Risk Factor Surveillance System (BRFSS) 2015 and includes various health indicators related to diabetes. This dataset comprises 22 variables, but our analysis will focus on a subset of these:
+
+BMI: Body Mass Index, a measure of body fat based on weight and height. MentHlth: Number of days in the past 30 days when mental health was not good. PhysHlth: Number of days in the past 30 days when physical health was not good. Diabetes_binary: Binary indicator of diabetes status (1 for yes, 0 for no), which is our primary outcome variable. HighBP: Whether the individual has high blood pressure (yes/no). HighChol: Whether the individual has high cholesterol (yes/no). CholCheck: Whether the individual has had their cholesterol checked in the past 5 years (yes/no). Smoker: Whether the individual is a current smoker (yes/no). Stroke: Whether the individual has had a stroke (yes/no). HeartDiseaseorAttack: Whether the individual has heart disease or has had a heart attack (yes/no). PhysActivity: Whether the individual engages in physical activity (yes/no). Fruits: Whether the individual consumes fruit regularly (yes/no). Veggies: Whether the individual consumes vegetables regularly (yes/no). HvyAlcoholConsump: Whether the individual consumes alcohol heavily (yes/no). AnyHealthcare: Whether the individual has any form of healthcare coverage (yes/no). NoDocbcCost: Whether the individual did not visit a doctor due to cost (yes/no). GenHlth: General health status (e.g., poor, fair, good, very good, excellent). DiffWalk: Whether the individual has difficulty walking or climbing stairs (yes/no). Sex: Gender of the individual (male/female). Age: Age of the individual. Education: Education level of the individual. Income: Income level of the individual.
+
+### split the data
+
+We split the data into a training (70% of the data) and test set (30% of the data). Use set.seed() to make things reproducible.
+
+### Modelling
+
+We’ll use logLoss as our metric to evaluate models. For all model types use logLoss with 5 fold cross-validation to select the best model. You should set up our own grid of tuning parameters in any model where that is possible. 3 models will be provided: Logistic Regression Models;Classification Tree;Random Forest. we will select the best model based on logloss
+
+### Log Loss
+
+Logarithmic Loss, or Log Loss, is a performance metric for evaluating the predictions of probabilistic models, particularly in binary classification. It measures the accuracy of the predicted probabilities, providing a more nuanced evaluation than simple accuracy metrics. Log Loss quantifies the uncertainty of the predictions by comparing the predicted probability assigned to the true class with the actual outcome.
+
+we choose log loss based on: 1.Probabilistic Predictions: Log Loss takes into account the predicted probabilities rather than just the final class labels. This is crucial in many applications where understanding the confidence of predictions is important, such as medical diagnosis or risk assessment. 2.Sensitivity to Confidence: Log Loss penalizes both incorrect predictions and confident incorrect predictions more heavily. This ensures that models not only aim to get the right answer but also provide reliable probability estimates.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(knitr)
+library(caret)
+
+```
+
+```{r}
+df <- read_csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+
+head(df)
+```
+
+```{r}
+df <- df %>%
+  mutate(
+    Diabetes_binary = factor(Diabetes_binary, levels = c(0, 1), labels = c("No", "Yes")),
+    HighBP = factor(HighBP, levels = c(0, 1), labels = c("No", "Yes")),
+    HighChol = factor(HighChol, levels = c(0, 1), labels = c("No", "Yes")),
+    CholCheck = factor(CholCheck, levels = c(0, 1), labels = c("No", "Yes")),
+    Smoker = factor(Smoker, levels = c(0, 1), labels = c("No", "Yes")),
+    Stroke = factor(Stroke, levels = c(0, 1), labels = c("No", "Yes")),
+    HeartDiseaseorAttack = factor(HeartDiseaseorAttack, levels = c(0, 1), labels = c("No", "Yes")),
+    PhysActivity = factor(PhysActivity, levels = c(0, 1), labels = c("No", "Yes")),
+    Fruits = factor(Fruits, levels = c(0, 1), labels = c("No", "Yes")),
+    Veggies = factor(Veggies, levels = c(0, 1), labels = c("No", "Yes")),
+    HvyAlcoholConsump = factor(HvyAlcoholConsump, levels = c(0, 1), labels = c("No", "Yes")),
+    AnyHealthcare = factor(AnyHealthcare, levels = c(0, 1), labels = c("No", "Yes")),
+    NoDocbcCost = factor(NoDocbcCost, levels = c(0, 1), labels = c("No", "Yes")),
+    GenHlth = factor(GenHlth, levels = 1:5, labels = c("Excellent", "Very Good", "Good", "Fair", "Poor")),
+    MentHlth = as.integer(MentHlth),
+    PhysHlth = as.integer(PhysHlth),
+    DiffWalk = factor(DiffWalk, levels = c(0, 1), labels = c("No", "Yes")),
+    Sex = factor(Sex, levels = c(0, 1), labels = c("Female", "Male")),
+    Age = factor(Age, levels = 1:13, labels = c("18-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+")),
+    Education = factor(Education, levels = 1:6, labels = c("Never attended", "Grades 1-8", "Grades 9-11", "Grade 12 or GED", "College 1-3 years", "College 4 years or more")),
+    Income = factor(Income, levels = 1:8, labels = c("<$10,000", "$10,000-$15,000", "$15,000-$20,000", "$20,000-$25,000", "$25,000-$35,000", "$35,000-$50,000", "$50,000-$75,000", ">$75,000"))
+  )
+
+head(df)
+```
+
+```{r}
+# Set seed for reproducibility
+set.seed(123)
+
+# Split the data
+trainIndex <- createDataPartition(df$Diabetes_binary, p = 0.7, list = FALSE)
+trainData <- df[trainIndex,]
+testData <- df[-trainIndex,]
+
+# Check the distribution in the splits
+table(trainData$Diabetes_binary)
+table(testData$Diabetes_binary)
+```
+
+### Logistic regression
+
+```{r}
+# Define the train control with logLoss and 5-fold CV
+
+log_reg_can <- glm(Diabetes_binary ~ ., data = trainData, family = "binomial")
+
+summary(log_reg_can)
+```
+
+```{r}
+train_control <- trainControl(method = "cv", number = 5, summaryFunction = mnLogLoss, classProbs = TRUE)
+
+# Logistic Regression Model
+log_reg_model1 <- train(Diabetes_binary ~ ., data = trainData, method = "glm", family = "binomial", trControl = train_control, metric = "logLoss")
+log_reg_model2 <- train(Diabetes_binary ~ HighBP+HighChol+CholCheck+Stroke+BMI+HeartDiseaseorAttack+PhysActivity+HvyAlcoholConsump+GenHlth+MentHlth
+                        +PhysHlth+DiffWalk+Sex+Age+Income, data = trainData, method = "glm", family = "binomial", trControl = train_control, metric = "logLoss")
+log_reg_model3 <- train(Diabetes_binary ~ HighBP+HighChol+CholCheck+Stroke+BMI+HeartDiseaseorAttack+PhysActivity+HvyAlcoholConsump+GenHlth+MentHlth
+                        +PhysHlth+DiffWalk+Sex+Age+Income+AnyHealthcare+Smoker, data = trainData, method = "glm", family = "binomial", trControl = train_control, metric = "logLoss")
+# Print model results
+print(log_reg_model1)
+print(log_reg_model2)
+print(log_reg_model3)
+```
+
+```{r}
+log_reg_preds <- predict(log_reg_model1, newdata = testData, type = "prob")
+
+actual_labels <- as.factor(testData$Diabetes_binary)
+
+# Prepare data in the format expected by mnLogLoss
+test_data１ <- data.frame(obs = actual_labels, log_reg_preds)
+
+# Calculate log loss using mnLogLoss
+log_reg_logLoss <- mnLogLoss(test_data１, lev = levels(actual_labels))
+
+# Print logLoss
+print(log_reg_logLoss)
+```
+
+### Classification Tree
+
+#### Classification Tree Model: Explanation and Implementation
+
+What is a Classification Tree? A classification tree is a type of decision tree used for classifying data into predefined classes. It consists of a series of questions (nodes) that lead to binary decisions, ultimately classifying the data into distinct categories (leaves). Each internal node represents a feature in the dataset, and each leaf node represents a class label. The tree splits the data based on feature values, making decisions at each node to separate the data into the classes.
+
+####　Why Use a Classification Tree? Interpretability: Classification trees are easy to interpret and visualize, making them useful for understanding how decisions are made based on the input features. Handling Non-linear Relationships: They can capture non-linear relationships between features and the target variable without requiring complex transformations. Feature Importance: Trees can provide insights into the importance of different features in making classifications. No Assumptions: They do not assume a specific distribution for the data, making them flexible for various types of data.
+
+```{r}
+train_control <- trainControl(method = "cv", number = 5, summaryFunction = mnLogLoss, classProbs = TRUE)
+cp_grid <- expand.grid(cp = seq(0.0001, 0.01, by = 0.001))
+# Fit the model
+tree_model <- train(Diabetes_binary ~ ., data = trainData, method = "rpart", trControl = train_control, tuneGrid = cp_grid, metric = "logLoss")
+
+# Print model results
+print(tree_model)
+tree_preds <- predict(tree_model, newdata = testData, type = "prob")
+
+
+actual_labels <- as.factor(testData$Diabetes_binary)
+
+# Prepare data in the format expected by mnLogLoss
+test_data１ <- data.frame(obs = actual_labels, tree_preds)
+
+# Calculate log loss using mnLogLoss
+log_reg_logLoss <- mnLogLoss(test_data１, lev = levels(actual_labels))
+
+# Print logLoss
+print(log_reg_logLoss)
+```
+
+###　Random Forest
+
+```{r}
+library(ranger)
+
+train_control <- trainControl(method = "cv", number = 5, summaryFunction = mnLogLoss, classProbs = TRUE)
+
+mtry_grid <- expand.grid(mtry = seq(2, ncol(trainData) - 1, by = 2),splitrule = "extratrees", min.node.size = 100)
+rf_model <- train(Diabetes_binary ~ ., data = trainData, method = "ranger", trControl = train_control, tuneGrid = mtry_grid, metric = "logLoss",num.trees = 100)
+# Predict on the test set (ensure it returns probabilities for both classes)
+rf_preds <- predict(rf_model, newdata = testData, type = "prob")
+
+# Extract the actual class labels
+actual_labels <- as.factor(testData$Diabetes_binary)
+
+# Prepare data in the format expected by mnLogLoss
+test_data <- data.frame(obs = actual_labels, rf_preds)
+
+# Calculate log loss using mnLogLoss
+rf_logLoss <- mnLogLoss(test_data, lev = levels(actual_labels))
+
+# Print logLoss
+print(rf_logLoss)
+
+```
+
+## I select log_reg_model1 as the best model.
